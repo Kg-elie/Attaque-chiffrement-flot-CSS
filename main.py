@@ -1,3 +1,4 @@
+import time
 
 class LFSR(object):
 
@@ -14,7 +15,7 @@ class LFSR(object):
     def __set_initialisation(self, booléens:list[bool]):
         """prend une liste de booléens de la taille du LFSR pour les charger dans le registre"""
         if self.n == len(booléens):
-            self.content = booléens[:]
+            self.s = booléens[:]
         else:
             raise ValueError
 
@@ -33,13 +34,43 @@ class LFSR(object):
         b = 0 # nouveau bit généré à partir des coefficiants de c et s
         for i in range(self.n):
             if self.c[i]:
+                #print(b, self.s[i])
                 b = (b + self.s[i]) % 2 # XOR
+                #time.sleep(0.5)
         self.__decalage(b)
         return output
 
 
-def make_LFRS_17():
+def question_2_3_1():
+    """Programmer le 1er LFSR de 17 bits et faire implémenter 
+    une fonction de test qui vérifie que l'état prend bien les (2**17)-1 valeurs
+    différentes pour une initialisation quelconque non-nulle du registre"""
+
+    def test(n):
+        """Vérifie si pendant n cycles le registre courant du LFSR est égal à l'initialisation du LFSR.\n
+        return [True | Tuple:(False, int)]\n
+        int indiquant le i-ième cycle où le vecteur d'initialisation est égal à la configuration actuelle."""
+        
+        i = 1
+        while i < n:
+            lfsr_17.cycle()
+            if lfsr_17.s == initialisation:
+                return (False, i)
+            i += 1
+        return True
+
+    initialisation = [1 for _ in range(17)]
+    lfsr_17 = LFSR(17, initialisation_s = initialisation, retroaction_c = (14,0)) # le 1er LFSR
+    print(test(n = (2**17)-1)) 
+    print(test(n = 2**17))
+
+def question_2_3_2():
+    """Programmer le 2nd LFSR de 25 bits"""
+    initialisation = [1 for _ in range(25)]
+    lfsr_17 = LFSR(17, initialisation_s = initialisation, retroaction_c = (12,4,3,0)) # le 2nd LFSR
+
+def question_2_3_3():
     pass
 
-def make_LFRS_25():
-    pass
+if __name__ == "__main__":
+    question_2_3_1()
