@@ -2,7 +2,7 @@ import time
 
 class LFSR(object):
 
-    def __init__(self, taille_n:int, initialisation_s:tuple[bool], retroaction_c:tuple[int]) -> None:
+    def __init__(self, taille_n:int, initialisation_s:list[bool], retroaction_c:tuple[int]) -> None:
         """initialisation -> s = [ s[0], ... , s[n-1] ]\n
         rétroaction -> c = [ c0, ... , cn-1 ]\n
         """
@@ -59,18 +59,60 @@ def question_2_3_1():
             i += 1
         return True
 
-    initialisation = [1 for _ in range(17)]
+    initialisation = [1 for _ in range(17)] # initialisation à {1}**17
     lfsr_17 = LFSR(17, initialisation_s = initialisation, retroaction_c = (14,0)) # le 1er LFSR
     print(test(n = (2**17)-1)) 
     print(test(n = 2**17))
 
 def question_2_3_2():
     """Programmer le 2nd LFSR de 25 bits"""
-    initialisation = [1 for _ in range(25)]
-    lfsr_17 = LFSR(17, initialisation_s = initialisation, retroaction_c = (12,4,3,0)) # le 2nd LFSR
+    initialisation = [1 for _ in range(25)] # initialisation à {1}**25
+    lfsr_25 = LFSR(25, initialisation_s = initialisation, retroaction_c = (12,4,3,0)) # le 2nd LFSR
 
 def question_2_3_3():
-    pass
+    
+    def get_octet_from_lfsr(lfsr:LFSR) -> tuple:
+        """Génère un octet à partir du LFSR fournit et renvoi son équivalent en base 10."""
+        output_int = 0
+        for i in range(8):
+            b = lfsr.cycle()
+            output_int += int(b)*(2**i)
+        return output_int
+    
+    def to_bin(z:int):
+        output = []
+        n = 1
+        i = 0
+        while n < z:
+            
+
+    def encrypter(key, m:list[bool]):
+        key_17 = [1] + key[:16]
+        key_25 = [1] + key[16:]
+        lfsr_17 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(14,0))
+        lfsr_25 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(12,4,3,0))
+        c = 0
+        while len(m) >= 8:
+            octet = m[:8]
+            m = m[8:]
+            x = get_octet_from_lfsr(lfsr=lfsr_17)
+            y = get_octet_from_lfsr(lfsr=lfsr_25)
+            z = (x + y + c) % 256
+            c += (x+y)//256
+            to_bin(z)
+
+            
+
+
+            
+
+
+
+    key = [0]*40
+    m = [1,1,1,1] * 10 # f <=> 1111
+    print(m)
+    encrypter(key=key)
+
 
 if __name__ == "__main__":
-    question_2_3_1()
+    question_2_3_3()
