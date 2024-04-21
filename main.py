@@ -1,130 +1,152 @@
-import time
+###########
+# CLASSES #
+###########
 
 class LFSR(object):
 
-    def __init__(self, taille_n:int, initialisation_s:list[bool], retroaction_c:tuple[int]) -> None:
-        """initialisation -> s = [ s[0], ... , s[n-1] ]\n
-        rétroaction -> c = [ c0, ... , cn-1 ]\n
-        """
-        self.n = taille_n # taille du LFSR
-        self.s = [0 for _ in range(self.n)] # registre initialisé à 0 sur chaques bits
-        self.c = [0 for _ in range(self.n)] # coefficiants de rétroaction initialisés à 0
-        self.__set_initialisation(initialisation_s)
-        self.__set_retroaction(retroaction_c)
-
-    def __set_initialisation(self, booléens:list[bool]):
-        """prend une liste de booléens de la taille du LFSR pour les charger dans le registre"""
-        if self.n == len(booléens):
-            self.s = booléens[:]
-        else:
-            raise ValueError
-
-    def __set_retroaction(self, retroaction:tuple[int]):
-        """"""
-        for r in retroaction:
-            self.c[r] = 1
-    
-    def __decalage(self, b:bool):
-        """Enlève s[0] et décalle tout les bits du registre tandis que b est ajouté en fin de registre"""
-        self.s = self.s[1:] + [b]
+    def __init__(self, initialisation_s:list[bool], retroaction_c:list[bool]) -> None:
+        self.s = initialisation_s[:] # registre initialisé à 0 sur chaques bits
+        self.c = retroaction_c[:] # coefficiants de rétroaction initialisés à 0
     
     def cycle(self) -> bool:
-        """Un cycle de fonctionnement LFSR"""
-        output = self.s[0]
-        b = 0 # nouveau bit généré à partir des coefficiants de c et s
-        for i in range(self.n):
-            if self.c[i]:
-                #print(b, self.s[i])
-                b = (b + self.s[i]) % 2 # XOR
-                #time.sleep(0.5)
-        self.__decalage(b)
+        output = self.s[-1]
+        b = 0
+        for i in range(len(self.s)):
+            if self.c[i] == 1:
+                b = (b + self.s[i]) % 2
+        self.s = [b] + self.s[:-1]
         return output
+    
+    def bits(self) -> list[bool]:
+        return self.s[:]
+    
+    def __repr__(self) -> str:
+        return "IN -> "+self.s.__repr__()+" -> OUT"
 
+class CSS(object):
+    
+    def __init__(self, key:list[bool]) -> None:
+        key_17 = [1] + key[:16]
+        key_25 = [1] + key[16:]
+        self.c = 0
+        self.lfsr17 = lfsr17(key_17)
+        self.lfsr25 = lfsr25(key_25)
+    
+    def cycle(self) -> list[bool]:
+        x = get_octet_from_lfsr(lfsr=self.lfsr17)
+        y = get_octet_from_lfsr(lfsr=self.lfsr25)
+        print(x,y)
+        output = (x + y + self.c) % 256
+        self.c += (x+y)//256
+        z = to_bin(output)
+        while len(z) <= 7:
+            z = [0] + z
+        return z
+
+#############
+# FONCTIONS #
+#############
+
+def lfsr17(initialisation:list[bool])->LFSR:
+    retro = [0 for i in range(17)]
+    retro[14] = 1
+    retro[0] = 1
+    retro.reverse()
+    return LFSR(initialisation, retro)
+
+def lfsr25(initialisation:list[bool])->LFSR:
+    retro = [0 for i in range(25)]
+    retro[12] = 1
+    retro[4] = 1
+    retro[3] = 1
+    retro[0] = 1
+    retro.reverse()
+    return LFSR(initialisation, retro)
+
+def get_octet_from_lfsr(lfsr:LFSR) -> int:
+    """Génère un octet à partir du LFSR fournit et renvoi son équivalent en base 10."""
+    output_int = 0
+    for i in range(8):
+        b = lfsr.cycle()
+        output_int += int(b)*(2**i)
+    return output_int
+
+def to_bin(z:int) -> list[bool]:
+    i = 0
+    output = []
+    while z > 0:
+        output.append(z % 2)
+        z = z // 2
+    output.reverse()
+    return output
+
+def xor(l1:list[bool],l2:list[bool]) -> list[bool]:
+    output = []
+    for i in range(len(l1)):
+        output.append((l1[i] + l2[i]) % 2)
+    return output
+
+def chiffrer(key:list[bool], m:list[bool]):
+    css = CSS(key)
+    output = []
+    while m:
+        octet = m[:8]
+        m = m[8:]
+        octet_c = css.cycle()
+        output += xor(octet_c, octet)
+    return output
+
+def dechiffrer(key:list[bool], c:list[bool]):
+    css = CSS(key)
+    output = []
+    while c:
+        octet = c[:8]
+        c = c[8:]
+        output += xor(css.cycle(),octet)
+    return output
+
+
+################
+# QUESTIONS DM #
+################
 
 def question_2_3_1():
     """Programmer le 1er LFSR de 17 bits et faire implémenter 
     une fonction de test qui vérifie que l'état prend bien les (2**17)-1 valeurs
     différentes pour une initialisation quelconque non-nulle du registre"""
-
     def test(n):
-        """Vérifie si pendant n cycles le registre courant du LFSR est égal à l'initialisation du LFSR.\n
-        return [True | Tuple:(False, int)]\n
-        int indiquant le i-ième cycle où le vecteur d'initialisation est égal à la configuration actuelle."""
-        
-        i = 1
-        while i < n:
-            lfsr_17.cycle()
-            if lfsr_17.s == initialisation:
-                return (False, i)
-            i += 1
+        initialisation = [1 for i in range(17)]
+        g17 = lfsr17(initialisation)
+        for i in range(1, n):
+            g17.cycle()
+            if initialisation == g17.bits():
+                print(f"boucle détectée en {i}")
+                return False
         return True
+    
+    print(test((2**17)-1)) # pas de boucle
+    print(test((2**17))) # boucle
+        
 
-    initialisation = [1 for _ in range(17)] # initialisation à {1}**17
-    lfsr_17 = LFSR(17, initialisation_s = initialisation, retroaction_c = (14,0)) # le 1er LFSR
-    print(test(n = (2**17)-1)) 
-    print(test(n = 2**17))
 
 def question_2_3_2():
     """Programmer le 2nd LFSR de 25 bits"""
     initialisation = [1 for _ in range(25)] # initialisation à {1}**25
-    lfsr_25 = LFSR(25, initialisation_s = initialisation, retroaction_c = (12,4,3,0)) # le 2nd LFSR
+    g25 = lfsr25(initialisation)
 
 def question_2_3_3():
-    
-    def get_octet_from_lfsr(lfsr:LFSR) -> int:
-        """Génère un octet à partir du LFSR fournit et renvoi son équivalent en base 10."""
-        output_int = 0
-        for i in range(8):
-            b = lfsr.cycle()
-            output_int += int(b)*(2**i)
-        return output_int
-    
-    def to_bin(z:int) -> list[bool]:
-        i = 0
-        output = []
-        while z > 0:
-            output.append(z % 2)
-            z = z // 2
-        output.reverse()
-        return output
-    
-    def xor(l1:list[bool],l2:list[bool]) -> list[bool]:
-        output = []
-        for i in range(len(l1)):
-            output.append((l1[i] + l2[i]) % 2)
-        return output
-
-    class CSS(object):
-
-        def __init__(self, key:list[bool]) -> None:
-            key_17 = [1] + key[:16]
-            key_25 = [1] + key[16:]
-            self.c = 0
-            self.lfsr17 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(14,0))
-            self.lfsr25 = LFSR(taille_n=25, initialisation_s=key_25, retroaction_c=(12,4,3,0))
-        
-        def cycle(self) -> list[bool]:
-            x = get_octet_from_lfsr(lfsr=self.lfsr17)
-            y = get_octet_from_lfsr(lfsr=self.lfsr25)
-            output = (x + y + self.c) % 256
-            self.c += (x+y)//256
-            return to_bin(output)
-
-
-    def encrypter(key:list[bool], m:list[bool]):
-        css = CSS(key)
-        output = []
-        while m:
-            octet = m[:8]
-            m = m[8:]
-            output += xor(css.cycle(),octet)
-        return output
-
+    """Programmer chiffrement et déchiffrement"""
     key = [0] * 40
     m = [1] * 40
-    c = encrypter(key=key, m=m)
-    print(c)
+    print(f"key = \n{key}")
+    print(f"m = \n{m}")
+    c = chiffrer(key=key, m=m) # <=> Oxffffb66c39
+    print(f"c = \n{c}")
+    new_m = dechiffrer(key=key, c=c)
+    print(f"new_m = \n{new_m}")
 
+def question_2_3_4():
+    pass
 
 if __name__ == "__main__":
     question_2_3_3()
