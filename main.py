@@ -71,7 +71,7 @@ def question_2_3_2():
 
 def question_2_3_3():
     
-    def get_octet_from_lfsr(lfsr:LFSR) -> tuple:
+    def get_octet_from_lfsr(lfsr:LFSR) -> int:
         """Génère un octet à partir du LFSR fournit et renvoi son équivalent en base 10."""
         output_int = 0
         for i in range(8):
@@ -79,39 +79,51 @@ def question_2_3_3():
             output_int += int(b)*(2**i)
         return output_int
     
-    def to_bin(z:int):
-        output = []
-        n = 1
+    def to_bin(z:int) -> list[bool]:
         i = 0
-        while n < z:
-            
+        output = []
+        while z > 0:
+            output.append(z % 2)
+            z = z // 2
+        output.reverse()
+        return output
+    
+    def xor(l1:list[bool],l2:list[bool]) -> list[bool]:
+        output = []
+        for i in range(len(l1)):
+            output.append((l1[i] + l2[i]) % 2)
+        return output
 
-    def encrypter(key, m:list[bool]):
-        key_17 = [1] + key[:16]
-        key_25 = [1] + key[16:]
-        lfsr_17 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(14,0))
-        lfsr_25 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(12,4,3,0))
-        c = 0
-        while len(m) >= 8:
+    class CSS(object):
+
+        def __init__(self, key:list[bool]) -> None:
+            key_17 = [1] + key[:16]
+            key_25 = [1] + key[16:]
+            self.c = 0
+            self.lfsr17 = LFSR(taille_n=17, initialisation_s=key_17, retroaction_c=(14,0))
+            self.lfsr25 = LFSR(taille_n=25, initialisation_s=key_25, retroaction_c=(12,4,3,0))
+        
+        def cycle(self) -> list[bool]:
+            x = get_octet_from_lfsr(lfsr=self.lfsr17)
+            y = get_octet_from_lfsr(lfsr=self.lfsr25)
+            output = (x + y + self.c) % 256
+            self.c += (x+y)//256
+            return to_bin(output)
+
+
+    def encrypter(key:list[bool], m:list[bool]):
+        css = CSS(key)
+        output = []
+        while m:
             octet = m[:8]
             m = m[8:]
-            x = get_octet_from_lfsr(lfsr=lfsr_17)
-            y = get_octet_from_lfsr(lfsr=lfsr_25)
-            z = (x + y + c) % 256
-            c += (x+y)//256
-            to_bin(z)
+            output += xor(css.cycle(),octet)
+        return output
 
-            
-
-
-            
-
-
-
-    key = [0]*40
-    m = [1,1,1,1] * 10 # f <=> 1111
-    print(m)
-    encrypter(key=key)
+    key = [0] * 40
+    m = [1] * 40
+    c = encrypter(key=key, m=m)
+    print(c)
 
 
 if __name__ == "__main__":
