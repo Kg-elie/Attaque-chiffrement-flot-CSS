@@ -1,6 +1,7 @@
 ###########
 # CLASSES #
 ###########
+import random
 
 class LFSR(object):
 
@@ -37,9 +38,9 @@ class CSS(object):
     def cycle(self) -> list[bool]:
         x = get_octet_from_lfsr(lfsr=self.lfsr17)
         y = get_octet_from_lfsr(lfsr=self.lfsr25)
-        print(x,y)
+        
         output = (x + y + self.c) % 256
-        self.c += (x+y)//256
+        self.c = (x+y)//256
         z = to_bin(output)
         self.octets.append(output)
         while len(z) <= 7:
@@ -105,7 +106,6 @@ def chiffrer(key:list[bool], m:list[bool]):
         m = m[8:]
         octet_c = css.cycle()
         output += xor(octet_c, octet)
-    init_S2(css.lfsr17, css)
     return output
 
 def dechiffrer(key:list[bool], c:list[bool]):
@@ -158,7 +158,7 @@ def question_2_3_3():
     print(f"new_m = \n{new_m}")
 
 
-def etat_init_S2(lfsr17: LFSR, css : CSS):
+def question_4(lfsr17: LFSR, css : CSS):
     """ etat initial du lfsr25 a partir des 3 premiers octets de sortie du CSS et du lfsr17"""
     y =[]
     c = 0
@@ -169,7 +169,74 @@ def etat_init_S2(lfsr17: LFSR, css : CSS):
         if s+ y[i] + c > 255:
             c = 1
     print( f"les octets de y sont {y}")
+
+def etat_initial_lfsr25(lfsr17_octet, css_octet)  :
+    """ etat initial du lfsr25 a partir des 3 premiers octets de sortie du CSS et du lfsr17"""
+    y = []
+    c = 0
+    for i in range(3):
+        s = lfsr17_octet[i]
+        z = css_octet[i]
+        result = (z-(s+c))%256
+        y = bin_xbit(result,8) + y
+        if s+ result > 255:
+            c = 1
+        else:
+            c = 0
+    return y
+
+def bin_xbit(nb:int,x:int):
+    """ retourne une liste de 16 bits"""
+    return [int(i) for i in bin(nb)[2:].zfill(x)]
+
+
+def verif_key(key: list, z: list):
+    """ verifie si la clé est correcte"""
+    css = CSS(key)
+    for i in range(6):
+        css.cycle()
+        if css.octets[i] != z[i]:
+            return False
+    return True
+
+
+def attaque_chiffrement(z: list):
+    """ retrouver l'etat initial du css avec ses 6 premiers octets de sortie"""
+    for i in range(2**16):
+        key = bin_xbit(i,16)
+        l = lfsr17([1]+key)
+        lfsr17_octet = []
+        for _ in range(3):
+            lfsr17_octet.append(get_octet_from_lfsr(l))
+        key.extend(etat_initial_lfsr25(lfsr17_octet, z[:3]))
+        verif = verif_key(key,z)
+        if verif:
+            print(f"la clé est {key} pour l'essai {i}")
+            return key
     
+
+
+def random_key():
+    key =  [ random.randint(0,1) for _ in range(40)]
+    css = CSS(key)
+    sortie = []
+    s_sortie = []
+    for i in range(6):
+        css.cycle()
+        sortie.append(css.octets[i])
+
+    print(f"{key}, sortie = {sortie}")
+    return sortie, key, css.lfsr17.octets, css.lfsr25.octets
+
+
+def correspondance(liste1, liste2):
+
+# Séparer chaque liste à partir du 17ème bit
+    octets_liste1 = [liste1[i:i+8] for i in range(16, len(liste1), 8)]
+    octets_liste2 = [liste2[i:i+8] for i in range(16, len(liste2), 8)]
+
+    print("Octets de la première liste à partir du 17ème bit:", octets_liste1)
+    print("Octets de la deuxième liste à partir du 17ème bit:", octets_liste2)
 
 
 
@@ -177,5 +244,21 @@ def question_2_3_4():
     pass
 
 if __name__ == "__main__":
-    question_2_3_3()
+    
+    test = random_key()
+    key16 = [1] + test[1][:16]
+
+    octets = []
+    l = lfsr17(key16)
+    for _ in range(3):
+        octets.append(get_octet_from_lfsr(l))
+    
+    key = key16 + etat_initial_lfsr25(octets, test[0])
+    print(test[2], test[3])
+    print(key[1:])
+    correspondance(test[1], key[1:])
+    essai = verif_key(key[1:],test[0])
+    print(essai)
+    attaque_chiffrement(test[0])
+    
     
