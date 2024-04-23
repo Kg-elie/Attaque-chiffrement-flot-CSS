@@ -7,6 +7,7 @@ class LFSR(object):
     def __init__(self, initialisation_s:list[bool], retroaction_c:list[bool]) -> None:
         self.s = initialisation_s[:] # registre initialisé à 0 sur chaques bits
         self.c = retroaction_c[:] # coefficiants de rétroaction initialisés à 0
+        self.octets = [] # octet en sortie du LFSR
     
     def cycle(self) -> bool:
         output = self.s[-1]
@@ -31,6 +32,7 @@ class CSS(object):
         self.c = 0
         self.lfsr17 = lfsr17(key_17)
         self.lfsr25 = lfsr25(key_25)
+        self.octets = [] # octet en sortie du CSS
     
     def cycle(self) -> list[bool]:
         x = get_octet_from_lfsr(lfsr=self.lfsr17)
@@ -39,6 +41,7 @@ class CSS(object):
         output = (x + y + self.c) % 256
         self.c += (x+y)//256
         z = to_bin(output)
+        self.octets.append(output)
         while len(z) <= 7:
             z = [0] + z
         return z
@@ -69,7 +72,15 @@ def get_octet_from_lfsr(lfsr:LFSR) -> int:
     for i in range(8):
         b = lfsr.cycle()
         output_int += int(b)*(2**i)
+    lfsr.octets.append(output_int)
     return output_int
+
+def bin_to_int(octal:list) -> int:
+    output = 0
+    for i in range(7,-1,-1):
+        val = octal[7-i]*(2**i)
+        output += val
+    return output
 
 def to_bin(z:int) -> list[bool]:
     i = 0
@@ -94,6 +105,7 @@ def chiffrer(key:list[bool], m:list[bool]):
         m = m[8:]
         octet_c = css.cycle()
         output += xor(octet_c, octet)
+    init_S2(css.lfsr17, css)
     return output
 
 def dechiffrer(key:list[bool], c:list[bool]):
@@ -145,8 +157,25 @@ def question_2_3_3():
     new_m = dechiffrer(key=key, c=c)
     print(f"new_m = \n{new_m}")
 
+
+def etat_init_S2(lfsr17: LFSR, css : CSS):
+    """ etat initial du lfsr25 a partir des 3 premiers octets de sortie du CSS et du lfsr17"""
+    y =[]
+    c = 0
+    for i in range(3):
+        s = lfsr17.octets[i]
+        z = css.octets[i]
+        y.append((z-(s+c))%256)
+        if s+ y[i] + c > 255:
+            c = 1
+    print( f"les octets de y sont {y}")
+    
+
+
+
 def question_2_3_4():
     pass
 
 if __name__ == "__main__":
     question_2_3_3()
+    
