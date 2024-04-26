@@ -1,5 +1,5 @@
 # Attaque-chiffrement-flot-CSS
-Ce projet répond aux questions d'un devoir maison de cryptographie en 3ème année de licence et est composé de deux éléments :
+Ce projet répond aux questions d'un devoir maison de cryptographie (3ème année de licence) et est composé de deux éléments :
 ## un pdf : dm2024.pdf
 ### Contenu :
 Réponses théoriques aux questions **4**,**5** et **6**.
